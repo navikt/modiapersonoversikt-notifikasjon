@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val ktorVersion = "1.1.3"
 val prometheusVersion = "0.4.0"
@@ -16,6 +15,10 @@ plugins {
 }
 
 buildscript {
+    repositories {
+        maven("https://repo.adeo.no/repository/maven-releases")
+        maven("https://repo.adeo.no/repository/maven-central")
+    }
     dependencies {
         classpath("org.junit.platform:junit-platform-gradle-plugin:1.2.0")
     }
@@ -38,9 +41,12 @@ dependencies {
 }
 
 repositories {
+    maven("https://repo.adeo.no/repository/maven-releases")
+    maven("https://repo.adeo.no/repository/maven-central")
+    maven("https://plugins.gradle.org/m2/")
+    maven("https://dl.bintray.com/kotlin/ktor/")
     jcenter()
     mavenCentral()
-    maven("https://dl.bintray.com/kotlin/ktor")
 }
 
 java {
@@ -68,12 +74,4 @@ tasks.named<Jar>("jar") {
                 it.copyTo(file)
         }
     }
-}
-
-tasks.named<KotlinCompile>("compileKotlin") {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-tasks.named<KotlinCompile>("compileTestKotlin") {
-    kotlinOptions.jvmTarget = "1.8"
 }
