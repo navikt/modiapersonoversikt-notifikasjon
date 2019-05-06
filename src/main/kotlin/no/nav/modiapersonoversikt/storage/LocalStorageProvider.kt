@@ -11,7 +11,7 @@ class LocalStorageProvider : StorageProvider {
     }
 
     override fun getMelding(id: UUID): Melding {
-        return Melding(UUID.randomUUID(), "TEST", LocalDateTime.now())
+        return Melding(UUID.randomUUID(), "Tittel", "TEST", "lenke", LocalDateTime.now())
     }
 
     override fun putMelding(melding: Melding): UUID {
