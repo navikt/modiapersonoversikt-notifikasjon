@@ -1,39 +1,63 @@
-# Java Gradle CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-java/ for more details
-#
 version: 2
 jobs:
   build:
+    working_directory: ~/modiapersonoversikt-notifikasjon
     docker:
-      # specify the version you desire here
-      - image: circleci/openjdk:8-jdk
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    working_directory: ~/repo
-
+      - image: circleci/openjdk:11-jdk
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
-
     steps:
       - checkout
-
-      # Download and cache dependencies
+      - setup_remote_docker:
+          docker_layer_caching: true
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "build.gradle.kts" }}
-            # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-
-      - run: gradle build
-
+      - run: gradle test
       - save_cache:
           paths:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle.kts" }}
+          when: always
+      - run:
+          name: github creds
+          command: |
+            set -e
+            git clone https://github.com/navikt/github-apps-support.git
+            export PATH=`pwd`/github-apps-support/bin:$PATH
+            echo $PERSONOVERSIKTCI_KEY | tr '_' '\n' > personoversiktci.key
+            export GITHUB_APP_ID=23451
+            export GH_TOKEN=$(generate-installation-token.sh `generate-jwt.sh personoversiktci.key $GITHUB_APP_ID`)
+            echo -e "machine api.github.com login x-access-token password $GH_TOKEN" > ~/.netrc
+            rm personoversiktci.key
+      - run:
+          name: build and push new version
+          command: |
+            set -e
+            if [ -z "${CIRCLE_PULL_REQUEST}" ] && [ "${CIRCLE_BRANCH}" = "master" ]; then
+              export DOCKER_IMG_NAME=navikt/modiapersonoversikt-notifikasjon
+              export RELEASE_VERSION="$(git fetch || true && git rev-list --count $CIRCLE_SHA1)"
+              export COMMIT_SHORT=$(git rev-parse --short HEAD)
+
+              ./gradlew build jar
+              docker build . -t $DOCKER_IMG_NAME:$RELEASE_VERSION
+
+              echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+              docker push $DOCKER_IMG_NAME:$RELEASE_VERSION
+
+              docker create -v /nais --name naisyaml alpine:3.4 /bin/true
+              docker cp deploy/preprod.yaml naisyaml:/nais
+
+              PREPROD_NAISERATOR=$(docker run --volumes-from naisyaml mikefarah/yq yq r /nais/preprod.yaml -j)
+              PREPROD_NAISERATOR=$(echo $PREPROD_NAISERATOR | jq '.spec.image = "'$DOCKER_IMG_NAME':'$RELEASE_VERSION'"' -c)
+              PREPROD_DEPLOYMENT=$(cat deploy/deployreq.json | jq '.payload.kubernetes.resources += ['$PREPROD_NAISERATOR']')
+              PREPROD_DEPLOYMENT=$(echo $PREPROD_DEPLOYMENT | jq '.environment = "dev-fss"')
+              PREPROD_DEPLOYMENT=$(echo $PREPROD_DEPLOYMENT | jq '.ref = "'$COMMIT_SHORT'"')
+              curl -i -n \
+                   -X POST \
+                   -d "$PREPROD_DEPLOYMENT" \
+                   -H "Accept: application/vnd.github.ant-man-preview+json" \
+                   https://api.github.com/repos/navikt/modiapersonoversikt-notifikasjon/deployments
+            fi

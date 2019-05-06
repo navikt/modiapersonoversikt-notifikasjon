@@ -1,0 +1,44 @@
+apiVersion: "nais.io/v1alpha1"
+kind: "Application"
+metadata:
+  name: modiapersonoversikt-notifikasjon
+  namespace: default
+  labels:
+    team: personoversikt
+spec:
+  image: navikt/modiapersonoversikt-notifikasjon:00
+  port: 7070
+  team: personoversikt
+  liveness:
+    path: /isAlive
+    initialDelay: 20
+    timeout: 1
+    periodSeconds: 5
+    failureThreshold: 10
+  readiness:
+    path: /isReady
+    initialDelay: 20
+    timeout: 1
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  ingresses:
+    - https://modiapersonoversikt-notifikasjon.nais.preprod.local
+  replicas:
+    min: 1
+    max: 2
+    cpuThresholdPercentage: 90
+  prometheus:
+    enabled: true
+    path: /metrics
+  vault:
+    enabled: true
+  env:
+    - name: S3_URL
+      value: s3.nais.preprod.local
+    - name: S3_REGION
+      value: us-east-1
