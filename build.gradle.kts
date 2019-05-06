@@ -8,7 +8,6 @@ val amazonS3Version = "1.11.534"
 val konfigVersion = "1.6.10.0"
 
 val mainClass = "no.nav.modiapersonoversikt.ApplicationKt"
-val archiveBaseName = "app"
 
 plugins {
     application
@@ -54,6 +53,8 @@ tasks.withType<Wrapper> {
 
 
 tasks.named<Jar>("jar") {
+    baseName = "app"
+    
     manifest {
         attributes["Main-Class"] = mainClass
         attributes["Class-Path"] = configurations["compile"].joinToString(separator = " ") {
