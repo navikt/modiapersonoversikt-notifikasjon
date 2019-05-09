@@ -36,31 +36,28 @@ class S3StorageProvider : StorageProvider {
         lagS3BucketsHvisNodvendig(NOTIFIKASJON_BUCKET_NAME, SIST_LEST_BUCKET_NAME)
     }
 
-    override fun hentNotifikasjoner(ident: String): List<NotifikasjonDTOOut> {
-        return timed("hent_notifikasjoner") {
-            val sistLest = hentSistLest(ident)
-            val meldinger: List<NotifikasjonDTOOut> = hentAlleNotifikasjoner()
+    override fun hentNotifikasjoner(ident: String): List<NotifikasjonDTOOut> =
+            timed("hent_notifikasjoner") {
+                val sistLest = hentSistLest(ident)
+                val meldinger: List<NotifikasjonDTOOut> = hentAlleNotifikasjoner()
 
-            meldinger.map { it.copy(settTidligere = it.opprettetDato.isBefore(sistLest)) }
-        }
-    }
+                meldinger.map { it.copy(settTidligere = it.opprettetDato.isBefore(sistLest)) }
+            }
 
-    override fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut? {
-        return timed("hent_notifikasjon") {
-            val meldingContent = s3.getObject(NOTIFIKASJON_BUCKET_NAME, id.toString())
-            val lagretMelding = gson.fromJson(InputStreamReader(meldingContent.objectContent), Notifikasjon::class.java)
-            NotifikasjonDTOOut(id, lagretMelding)
-        }
-    }
+    override fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut? =
+            timed("hent_notifikasjon") {
+                val meldingContent = s3.getObject(NOTIFIKASJON_BUCKET_NAME, id.toString())
+                val lagretMelding = gson.fromJson(InputStreamReader(meldingContent.objectContent), Notifikasjon::class.java)
+                NotifikasjonDTOOut(id, lagretMelding)
+            }
 
-    override fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID {
-        return timed("opprett_notifikasjon") {
-            val id = UUID.randomUUID()
-            val notifikasjonTilLagring = Notifikasjon(notifikasjon, LocalDateTime.now())
-            s3.putObject(NOTIFIKASJON_BUCKET_NAME, id.toString(), gson.toJson(notifikasjonTilLagring))
-            id
-        }
-    }
+    override fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID =
+            timed("opprett_notifikasjon") {
+                val id = UUID.randomUUID()
+                val notifikasjonTilLagring = Notifikasjon(notifikasjon, LocalDateTime.now())
+                s3.putObject(NOTIFIKASJON_BUCKET_NAME, id.toString(), gson.toJson(notifikasjonTilLagring))
+                id
+            }
 
     override fun slettNotifikasjon(id: UUID) {
         timed("slett_notifikasjon") {
@@ -74,30 +71,28 @@ class S3StorageProvider : StorageProvider {
         }
     }
 
-    private fun hentSistLest(ident: String): LocalDateTime {
-        return timed("hent_sist_lest") {
-            try {
-                val sistLest = s3.getObjectAsString(SIST_LEST_BUCKET_NAME, ident)
+    private fun hentSistLest(ident: String): LocalDateTime =
+            timed("hent_sist_lest") {
+                try {
+                    val sistLest = s3.getObjectAsString(SIST_LEST_BUCKET_NAME, ident)
 
-                LocalDateTime.parse(sistLest, DATE_FORMATTER)
-            } catch (e: Exception) {
-                MIN_DATE
+                    LocalDateTime.parse(sistLest, DATE_FORMATTER)
+                } catch (e: Exception) {
+                    MIN_DATE
+                }
             }
-        }
-    }
 
-    private fun hentAlleNotifikasjoner(): List<NotifikasjonDTOOut> {
-        return timed("hent_alle_notifikasjoner") {
-            try {
-                s3.listObjectsV2(NOTIFIKASJON_BUCKET_NAME)
-                        .objectSummaries
-                        .map { hentNotifikasjon(UUID.fromString(it.key)) }
-                        .filterNotNull()
-            } catch (e: Exception) {
-                emptyList()
+    private fun hentAlleNotifikasjoner(): List<NotifikasjonDTOOut> =
+            timed("hent_alle_notifikasjoner") {
+                try {
+                    s3.listObjectsV2(NOTIFIKASJON_BUCKET_NAME)
+                            .objectSummaries
+                            .map { hentNotifikasjon(UUID.fromString(it.key)) }
+                            .filterNotNull()
+                } catch (e: Exception) {
+                    emptyList()
+                }
             }
-        }
-    }
 
     private fun lagS3BucketsHvisNodvendig(vararg buckets: String) {
         timed("lag_buckets_hvis_nodvendig") {
