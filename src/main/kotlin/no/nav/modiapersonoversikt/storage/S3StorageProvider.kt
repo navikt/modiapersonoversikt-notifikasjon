@@ -8,6 +8,7 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.CannedAccessControlList
 import com.amazonaws.services.s3.model.CreateBucketRequest
 import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import no.nav.modiapersonoversikt.DATE_FORMATTER
 import no.nav.modiapersonoversikt.configuration
 import no.nav.modiapersonoversikt.model.Notifikasjon
@@ -19,6 +20,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 private const val NOTIFIKASJON_BUCKET_NAME = "modiapersonoversikt-notifikasjon-bucket"
+private const val NOTIFIKASJON_KEY_NAME = "notifikasjoner"
 private const val SIST_LEST_BUCKET_NAME = "odiapersonoversikt-notifikasjon-sist-lest-bucket"
 val MIN_DATE = LocalDateTime.parse("1970-01-01T00:00:00.000", DATE_FORMATTER)
 
@@ -39,29 +41,32 @@ class S3StorageProvider : StorageProvider {
     override fun hentNotifikasjoner(ident: String): List<NotifikasjonDTOOut> =
             timed("hent_notifikasjoner") {
                 val sistLest = hentSistLest(ident)
-                val meldinger: List<NotifikasjonDTOOut> = hentAlleNotifikasjoner()
-
-                meldinger.map { it.copy(settTidligere = it.opprettetDato.isBefore(sistLest)) }
+                hentNotifikasjoner()
+                        .map { NotifikasjonDTOOut(it, it.opprettetDato.isBefore(sistLest)) }
             }
 
-    override fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut? =
+    override fun hentNotifikasjon(ident: String, id: UUID): NotifikasjonDTOOut? =
             timed("hent_notifikasjon") {
-                val meldingContent = s3.getObject(NOTIFIKASJON_BUCKET_NAME, id.toString())
-                val lagretMelding = gson.fromJson(InputStreamReader(meldingContent.objectContent), Notifikasjon::class.java)
-                NotifikasjonDTOOut(id, lagretMelding)
+                val sistLest = hentSistLest(ident)
+                hentNotifikasjoner()
+                        .find { it.id == id }
+                        ?.let { NotifikasjonDTOOut(it, it.opprettetDato.isBefore(sistLest)) }
             }
 
     override fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID =
             timed("opprett_notifikasjon") {
                 val id = UUID.randomUUID()
-                val notifikasjonTilLagring = Notifikasjon(notifikasjon, LocalDateTime.now())
-                s3.putObject(NOTIFIKASJON_BUCKET_NAME, id.toString(), gson.toJson(notifikasjonTilLagring))
+                val notifikasjonTilLagring = Notifikasjon(id, notifikasjon, LocalDateTime.now())
+                val notifikasjoner = hentNotifikasjoner().plus(notifikasjonTilLagring)
+
+                lagreNotifikasjoner(notifikasjoner)
                 id
             }
 
     override fun slettNotifikasjon(id: UUID) {
         timed("slett_notifikasjon") {
-            s3.deleteObject(NOTIFIKASJON_BUCKET_NAME, id.toString())
+            val notifikasjoner = hentNotifikasjoner().filter { it.id == id }
+            lagreNotifikasjoner(notifikasjoner)
         }
     }
 
@@ -82,13 +87,15 @@ class S3StorageProvider : StorageProvider {
                 }
             }
 
-    private fun hentAlleNotifikasjoner(): List<NotifikasjonDTOOut> =
-            timed("hent_alle_notifikasjoner") {
+    private fun lagreNotifikasjoner(notifikasjoner: List<Notifikasjon>) =
+        timed("lagre_notifikasjoner") {
+            s3.putObject(NOTIFIKASJON_BUCKET_NAME, NOTIFIKASJON_KEY_NAME, gson.toJson(notifikasjoner))
+        }
+    private fun hentNotifikasjoner(): List<Notifikasjon> =
+            timed("hent_notifikasjoner") {
                 try {
-                    s3.listObjectsV2(NOTIFIKASJON_BUCKET_NAME)
-                            .objectSummaries
-                            .map { hentNotifikasjon(UUID.fromString(it.key)) }
-                            .filterNotNull()
+                    val notifikasjonerContent = s3.getObject(NOTIFIKASJON_BUCKET_NAME, NOTIFIKASJON_KEY_NAME)
+                    gson.fromJson(InputStreamReader(notifikasjonerContent.objectContent), object : TypeToken<List<Notifikasjon>>() {}.type)
                 } catch (e: Exception) {
                     emptyList()
                 }

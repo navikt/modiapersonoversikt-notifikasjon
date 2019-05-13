@@ -10,12 +10,13 @@ data class NotifikasjonDTOIn(
 )
 
 data class Notifikasjon(
+        val id: UUID,
         val tittel: String,
         val melding: String,
         val lenke: String?,
         val opprettetDato: LocalDateTime
 ) {
-    constructor(notifikasjon: NotifikasjonDTOIn, opprettetDato: LocalDateTime): this(notifikasjon.tittel, notifikasjon.melding, notifikasjon.lenke, opprettetDato)
+    constructor(id: UUID, notifikasjon: NotifikasjonDTOIn, opprettetDato: LocalDateTime): this(id, notifikasjon.tittel, notifikasjon.melding, notifikasjon.lenke, opprettetDato)
 }
 
 data class NotifikasjonDTOOut(
@@ -26,5 +27,5 @@ data class NotifikasjonDTOOut(
         val opprettetDato: LocalDateTime,
         val settTidligere: Boolean = false
 ) {
-    constructor(id: UUID, notifikasjon: Notifikasjon): this(id, notifikasjon.tittel, notifikasjon.melding, notifikasjon.lenke, notifikasjon.opprettetDato)
+    constructor(notifikasjon: Notifikasjon, settTidligere: Boolean): this(notifikasjon.id, notifikasjon.tittel, notifikasjon.melding, notifikasjon.lenke, notifikasjon.opprettetDato, settTidligere)
 }

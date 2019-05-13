@@ -7,7 +7,7 @@ import java.util.*
 interface StorageProvider {
     fun hentNotifikasjoner(ident: String): List<NotifikasjonDTOOut>
 
-    fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut?
+    fun hentNotifikasjon(ident: String, id: UUID): NotifikasjonDTOOut?
 
     fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID
 
