@@ -15,6 +15,7 @@ import no.nav.modiapersonoversikt.routes.notifikasjonRoutes
 import no.nav.modiapersonoversikt.storage.S3StorageProvider
 import no.nav.modiapersonoversikt.storage.StorageProvider
 import org.slf4j.event.Level
+import java.time.LocalDateTime
 
 fun createHttpServer(applicationState: ApplicationState,
                      provider: StorageProvider = S3StorageProvider(),
@@ -27,6 +28,8 @@ fun createHttpServer(applicationState: ApplicationState,
 
     install(ContentNegotiation) {
         gson {
+            registerTypeAdapter(LocalDateTime::class.java, localDateTimeSerializer)
+            registerTypeAdapter(LocalDateTime::class.java, localDateTimeDeserializer)
             setPrettyPrinting()
             disableHtmlEscaping()
         }

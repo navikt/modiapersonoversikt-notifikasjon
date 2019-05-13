@@ -1,14 +1,17 @@
 package no.nav.modiapersonoversikt.storage
 
-import no.nav.modiapersonoversikt.model.Melding
+import no.nav.modiapersonoversikt.model.NotifikasjonDTOIn
+import no.nav.modiapersonoversikt.model.NotifikasjonDTOOut
 import java.util.*
 
 interface StorageProvider {
-    fun getMeldinger(): List<Melding>
+    fun hentNotifikasjoner(ident: String): List<NotifikasjonDTOOut>
 
-    fun getMelding(id: UUID): Melding
+    fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut?
 
-    fun putMelding(melding: Melding): UUID
+    fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID
 
-    fun fjernMelding(id: UUID)
+    fun slettNotifikasjon(id: UUID)
+
+    fun oppdaterSistLest(ident: String)
 }

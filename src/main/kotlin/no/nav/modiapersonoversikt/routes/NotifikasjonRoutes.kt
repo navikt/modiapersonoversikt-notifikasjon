@@ -10,17 +10,25 @@ import java.util.*
 
 fun Routing.notifikasjonRoutes(provider: StorageProvider) {
     route("/notifikasjoner") {
-        get {
-            call.respond(provider.getMeldinger())
+        get("/{ident}") {
+            call.parameters["ident"]
+                    ?.let(provider::hentNotifikasjoner)
+                    ?: call.respond(HttpStatusCode.BadRequest)
         }
 
         post {
-            provider.putMelding(call.receive())
+            call.respond(provider.opprettNotifikasjon(call.receive()))
+        }
+
+        post("/{ident}/lest") {
+            call.parameters["ident"]
+                    ?.let(provider::oppdaterSistLest)
+                    ?: call.respond(HttpStatusCode.BadRequest)
         }
 
         delete("/{id}") {
             val id = call.parameters["id"] ?: call.respond(HttpStatusCode.BadRequest)
-            provider.fjernMelding(UUID.fromString(id as String))
+            call.respond(provider.slettNotifikasjon(UUID.fromString(id as String)))
         }
     }
 }

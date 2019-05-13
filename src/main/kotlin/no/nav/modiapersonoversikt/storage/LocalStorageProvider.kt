@@ -1,26 +1,40 @@
 package no.nav.modiapersonoversikt.storage
 
-import no.nav.modiapersonoversikt.model.Melding
+import no.nav.modiapersonoversikt.model.Notifikasjon
+import no.nav.modiapersonoversikt.model.NotifikasjonDTOIn
+import no.nav.modiapersonoversikt.model.NotifikasjonDTOOut
 import java.time.LocalDateTime
 import java.util.*
 
 class LocalStorageProvider : StorageProvider {
+    private var meldinger: MutableMap<UUID, Notifikasjon> = mutableMapOf()
+    private var sistLest: MutableMap<String, LocalDateTime> = mutableMapOf()
 
-    override fun getMeldinger(): List<Melding> {
-        return emptyList()
+    override fun hentNotifikasjoner(ident: String): List<NotifikasjonDTOOut> {
+        val sistLest = hentSistLest(ident)
+        return meldinger
+                .entries
+                .map { NotifikasjonDTOOut(it.key, it.value) }
+                .map { it.copy(settTidligere = it.opprettetDato.isBefore(sistLest)) }
     }
 
-    override fun getMelding(id: UUID): Melding {
-        return Melding(UUID.randomUUID(), "Tittel", "TEST", "lenke", LocalDateTime.now())
+    override fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut? =
+            meldinger[id]?.let { NotifikasjonDTOOut(id, it) }
+
+    override fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID {
+        val id = UUID.randomUUID()
+        meldinger[id] = Notifikasjon(notifikasjon, LocalDateTime.now())
+        return id
     }
 
-    override fun putMelding(melding: Melding): UUID {
-        return UUID.randomUUID()
+    override fun slettNotifikasjon(id: UUID) {
+        meldinger.remove(id)
     }
 
-    override fun fjernMelding(id: UUID) {
-
+    override fun oppdaterSistLest(ident: String) {
+        sistLest[ident] = LocalDateTime.now()
     }
 
-
+    private fun hentSistLest(ident: String): LocalDateTime =
+            sistLest.getOrPut(ident, { MIN_DATE })
 }
