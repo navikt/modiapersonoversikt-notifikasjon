@@ -14,16 +14,18 @@ class LocalStorageProvider : StorageProvider {
         val sistLest = hentSistLest(ident)
         return meldinger
                 .entries
-                .map { NotifikasjonDTOOut(it.key, it.value) }
-                .map { it.copy(settTidligere = it.opprettetDato.isBefore(sistLest)) }
+                .map { NotifikasjonDTOOut(it.value, it.value.opprettetDato.isBefore(sistLest)) }
     }
 
-    override fun hentNotifikasjon(id: UUID): NotifikasjonDTOOut? =
-            meldinger[id]?.let { NotifikasjonDTOOut(id, it) }
+    override fun hentNotifikasjon(ident: String, id: UUID): NotifikasjonDTOOut? {
+        val hentSistLest = hentSistLest(ident)
+        return meldinger[id]
+                ?.let { NotifikasjonDTOOut(it, it.opprettetDato.isBefore(hentSistLest)) }
+    }
 
     override fun opprettNotifikasjon(notifikasjon: NotifikasjonDTOIn): UUID {
         val id = UUID.randomUUID()
-        meldinger[id] = Notifikasjon(notifikasjon, LocalDateTime.now())
+        meldinger[id] = Notifikasjon(id, notifikasjon, LocalDateTime.now())
         return id
     }
 
