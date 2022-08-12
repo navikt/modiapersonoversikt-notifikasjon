@@ -12,8 +12,4 @@ En tjeneste for å sende notifikasjoner til saksbehandlere på modiapersonoversi
 ## Henvendelser
 Spørsmål knyttet til koden eller prosjektet kan rettes mot:
 
--   Daniel Winsvold, daniel.winsvold@nav.no
--   Jan-Eirik B. Nævdal, jan.eirik.b.navdal@nav.no
--   Jørund Amsen, jorund.amsen@nav.no
--   Richard Borge, richard.borge@nav.no
--   Nicklas Utgaard, nicklas.utgaard@nav.no
+[Team Personoversikt](https://github.com/navikt/info-team-personoversikt)
